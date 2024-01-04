@@ -2,20 +2,20 @@ const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require('cors');
-require("dotenv").config();
-const port = process.env.PORT || 9500;
+// require("dotenv").config();
+const port = process.env.PORT ;
 
 //creating a server and intergrating it with socketio.
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: { origin: process.env.FRONTEND_LINK, methods: ["GET", "POST"] }
+app.use(cors());
 
+const io = new Server(httpServer, {
+  cors: { origin: '*', methods: ["GET", "POST"] }
 });
 
 
 
-app.use(cors());
 
 app.get('/', (req, res) => {
   res.send("Hello This is a server");
@@ -23,9 +23,10 @@ app.get('/', (req, res) => {
 
 
 const users = [];
-
+let key = 0;
 function userconnected(username, roomid, id) {
-  const user = { username, roomid, id };
+   key++;
+  const user = { username, roomid, id, key };
   users.push(user);
   return user;
 }
