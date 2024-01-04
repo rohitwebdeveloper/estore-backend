@@ -2,13 +2,14 @@ const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require('cors');
+require("dotenv").config();
 const port = process.env.PORT || 9500;
 
 //creating a server and intergrating it with socketio.
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: "http://localhost:3000", methods: ["GET", "POST"] }
+  cors: { origin: process.env.FRONTEND_LINK, methods: ["GET", "POST"] }
 
 });
 
