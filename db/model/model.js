@@ -1,32 +1,5 @@
 const mongoose = require('mongoose');
 
-const studentSchema = new mongoose.Schema({
-    name:{
-        type:String,
-        required:true
-    },
-    class:{
-        type:Number,
-        default:10
-    },
-    age:{
-        type:Number,
-        required:true
-    },
-    fatherName:{
-        type:String,
-        required:true
-    },
-    mobileNumber:{
-        type:Number,
-        required:true
-    }
-
-})
-
-const studentModel = mongoose.model("student", studentSchema);
-
-
 const customerSchema  = new mongoose.Schema({
 
     name:{

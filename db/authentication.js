@@ -1,15 +1,5 @@
-const { studentModel, customerModel } = require("./model/model");
-// const { OAuth2Client } = require('google-auth-library')
+const { customerModel } = require("./model/model");
 
-// const insertStudent = async (studentdetail) => {
-//   try {
-//     const student = new studentModel(studentdetail);
-//     await student.save();
-//     console.log(student)
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
 
 const addcustomer = async (ctrfullname, ctremail, ctrpassword) => {
   try {
@@ -28,23 +18,7 @@ const addcustomer = async (ctrfullname, ctremail, ctrpassword) => {
 }
 
 
-// const updateStudent = async (studentfatherName) => {
-//   try {
-//     await studentModel.updateOne({ fatherName: studentfatherName }, { name: 'Om Prakash Upadhayay' });
-//     console.log("Details Updated:")
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
 
-// const findallstudent = async (detail) => {
-//   try {
-//     return await studentModel.find({ name: detail });
-
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
 
 const findEmailExistence = async (useremail) => {
   try {
@@ -60,7 +34,7 @@ const findEmailExistence = async (useremail) => {
 const checkEmailExistence = async (useremail) =>{
   try{
     const result = await customerModel.find({email:useremail})
-    if(result.length === 0 ) {
+    if(result.length === 0 || result===null ) {
       return false
     }else{
       return true
@@ -101,13 +75,8 @@ const userProfiledata = async (email) => {
 
 // User login using google authentication
 const googleAuthClient = async (useremail) => {
-  // const googleAuth = new OAuth2Client();
-  try {
 
-    // const decodeToken = await googleAuth.verifyIdToken({
-    //   idToken: userToken,
-    //   audience: clientId
-    // })
+  try {
      const result = await customerModel.findOne({email:useremail})
       if (result) {
         return true
@@ -122,4 +91,16 @@ const googleAuthClient = async (useremail) => {
 }
 
 
-module.exports = { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence };
+// Function to updata user password
+const resetPassword = async (newpassword, email)=>{
+  try {
+    await customerModel.updateOne({email:email}, {password:newpassword})
+    return true;
+  } catch (error) {
+    console.log("Error in resetting password");
+    throw new Error("Failed to reset password");
+  }
+}
+
+
+module.exports = { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword };
