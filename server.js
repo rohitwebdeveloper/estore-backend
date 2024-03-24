@@ -5,7 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const connectToDatabase = require('./db/connect/connect');
-const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword } = require('./db/authentication');
+const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword, updateProfile } = require('./db/authentication');
 const { validateEmail, validatepassword } = require('./db/validation');
 const { sendEmail } = require('./db/sendMail');
 // const nodemailer = require('nodemailer');
@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 //  DEFINING ROUTES:-
 
 // Route for signup request from the user
-app.post('/signup', async (req, res) => {
+app.post('/auth/user/sign-up', async (req, res) => {
 
     const { fullname, email, password } = req.body;
 
@@ -54,11 +54,11 @@ app.post('/signup', async (req, res) => {
 
 
 // Defining route for login request from the user
-app.post('/signin', async (req, res) => {
+app.post('/auth/user/sign-in', async (req, res) => {
 
     const { email, password } = req.body;
     const token = jwt.sign({ email: email }, 'qwertyestorekey')
-    console.log(token);
+    // console.log(token);
 
     // Validating email format at server-side
     if (!validateEmail(email)) {
@@ -88,10 +88,10 @@ app.post('/signin', async (req, res) => {
 
 
 // Authentication of user without signin on website visit
-app.post('/authuser', async (req, res) => {
+app.post('/auth/user/verify-user', async (req, res) => {
 
     const { userid } = req.body;
-    console.log(userid)
+    // console.log(userid)
     try {
         const decoded = await jwt.verify(userid, 'qwertyestorekey');
         const result = await checkEmailExistence(decoded.email);
@@ -110,7 +110,7 @@ app.post('/authuser', async (req, res) => {
 
 
 // Route for accessing user profile details
-app.get('/profile/:userid', async (req, res) => {
+app.get('/users/profile/:userid', async (req, res) => {
 
     const usertoken = req.params.userid;
     try {
@@ -126,7 +126,7 @@ app.get('/profile/:userid', async (req, res) => {
 
 
 // Route for signin with google 
-app.post('/googlesignin', async (req, res) => {
+app.post('/auth/user/google/sign-in', async (req, res) => {
 
     const { useremail } = req.body;
     const token = jwt.sign({ email: useremail }, 'qwertyestorekey')
@@ -148,7 +148,7 @@ app.post('/googlesignin', async (req, res) => {
 
 
 // Route for forget password to send verification code on user's email
-app.post('/password/forget', async (req, res) => {
+app.post('/auth/user/forget-password', async (req, res) => {
 
     const { useremail } = await req.body;
     const verificationCode = Math.floor(Math.random() * 1000000)
@@ -197,6 +197,22 @@ app.patch('/auth/user/reset-password', async (req, res) => {
         const resetResult = await resetPassword(newpassword, emailverified)
         if (resetResult) {
             return res.status(200).json({ success: true, message: 'newpassword received successfully' })
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+        console.log('Server..js error:', error);
+    }
+})
+
+
+// Route for user profile details update request
+app.patch('/user/profile/update', async (req, res) => {
+    const { name, email, mobileno, address } = req.body;
+
+    try {
+        const updateResult = await updateProfile(name, email, mobileno, address);
+        if (updateResult) {
+            return res.status(200).json({ success:true, message: 'Profile details updated successfully', updateResult })
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })

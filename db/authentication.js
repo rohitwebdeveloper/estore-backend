@@ -103,4 +103,15 @@ const resetPassword = async (newpassword, email)=>{
 }
 
 
-module.exports = { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword };
+const updateProfile = async (name, email, mobileno, address) =>{
+     try{
+      const updatedprofile = await customerModel.findOneAndUpdate({email:email}, {$set:{name:name, mobilenumber:mobileno, address:address}}, {new:true})
+        return updatedprofile;
+     }catch (error) {
+      console.log("Error in updating profile");
+      throw new Error('Failed to update profile')
+     }
+}
+
+
+module.exports = { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword, updateProfile };

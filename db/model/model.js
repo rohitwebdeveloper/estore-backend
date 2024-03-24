@@ -14,6 +14,14 @@ const customerSchema  = new mongoose.Schema({
     password:{
         type:String,
         default:'password'
+    },
+    mobilenumber:{
+        type:Number,
+        default:9997193344
+    },
+    address:{
+        type:String,
+        default:'Address'
     }
 
 })
@@ -21,4 +29,4 @@ const customerSchema  = new mongoose.Schema({
 const customerModel = mongoose.model("customer", customerSchema);
 
 
-module.exports = {studentModel, customerModel};
+module.exports = {customerModel};
