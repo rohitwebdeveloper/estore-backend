@@ -1,9 +1,9 @@
-const { customerModel } = require("./model/model");
+const { user } = require("../models/user");
 
 
 const addcustomer = async (ctrfullname, ctremail, ctrpassword) => {
   try {
-    const newcustomer = new customerModel({
+    const newcustomer = new user({
       name: ctrfullname,
       email: ctremail,
       password: ctrpassword
@@ -14,7 +14,7 @@ const addcustomer = async (ctrfullname, ctremail, ctrpassword) => {
 
   } catch (error) {
     console.log(error);
-  }
+  } 
 }
 
 
@@ -22,7 +22,7 @@ const addcustomer = async (ctrfullname, ctremail, ctrpassword) => {
 
 const findEmailExistence = async (useremail) => {
   try {
-    const email = await customerModel.find({ email: useremail });
+    const email = await user.find({ email: useremail });
     return email
   } catch (error) {
     console.log("This is an error of Finding", error);
@@ -33,7 +33,7 @@ const findEmailExistence = async (useremail) => {
 
 const checkEmailExistence = async (useremail) =>{
   try{
-    const result = await customerModel.find({email:useremail})
+    const result = await user.find({email:useremail})
     if(result.length === 0 || result===null ) {
       return false
     }else{
@@ -47,11 +47,11 @@ const checkEmailExistence = async (useremail) =>{
 }
 
 
-const verifySigninDetails = async (customerEmail, customerpassword) => {
+const verifySigninDetails = async (email, password) => {
   try {
-    const user = await customerModel.findOne({ email: customerEmail });
+    const userData = await user.findOne({ email:email });
     // console.log("user's:" ,user )
-    if (user.password == customerpassword ) {
+    if (userData.password == password ) {
       return true
     } else {
       return false
@@ -64,7 +64,7 @@ const verifySigninDetails = async (customerEmail, customerpassword) => {
 
 const userProfiledata = async (email) => {
   try {
-    const userData = await customerModel.findOne({ email: email })
+    const userData = await user.findOne({ email: email })
     return userData;
   } catch (error) {
     console.log("Error in finding userprofile data");
@@ -77,7 +77,7 @@ const userProfiledata = async (email) => {
 const googleAuthClient = async (useremail) => {
 
   try {
-     const result = await customerModel.findOne({email:useremail})
+     const result = await user.findOne({email:useremail})
       if (result) {
         return true
       } else {
@@ -94,7 +94,7 @@ const googleAuthClient = async (useremail) => {
 // Function to updata user password
 const resetPassword = async (newpassword, email)=>{
   try {
-    await customerModel.updateOne({email:email}, {password:newpassword})
+    await user.updateOne({email:email}, {password:newpassword})
     return true;
   } catch (error) {
     console.log("Error in resetting password");
@@ -105,7 +105,7 @@ const resetPassword = async (newpassword, email)=>{
 
 const updateProfile = async (name, email, mobileno, address) =>{
      try{
-      const updatedprofile = await customerModel.findOneAndUpdate({email:email}, {$set:{name:name, mobilenumber:mobileno, address:address}}, {new:true})
+      const updatedprofile = await user.findOneAndUpdate({email:email}, {$set:{name:name, mobilenumber:mobileno, address:address}}, {new:true})
         return updatedprofile;
      }catch (error) {
       console.log("Error in updating profile");

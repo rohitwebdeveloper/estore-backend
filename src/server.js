@@ -1,18 +1,29 @@
 const express = require('express')
-const app = express();
-port = 8000 || process.env.PORT;
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
-const connectToDatabase = require('./db/connect/connect');
-const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword, updateProfile } = require('./db/authentication');
-const { validateEmail, validatepassword } = require('./db/validation');
-const { sendEmail } = require('./db/sendMail');
-// const nodemailer = require('nodemailer');
+const connectToDatabase = require('./db/connect');
+require('dotenv').config({ path: '../.env' });
 
+const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword, updateProfile } = require('./utils/authentication');
+const { validateEmail, validatepassword } = require('./utils/validation');
+const { sendEmail } = require('./utils/sendMail');
+const { generateOrder } = require('./utils/order')
+const store = require('./middlewares/storeimage')
+const uploadImg = require('./utils/cloudinary')
+const {addproduct} = require('./utils/addproduct')
+
+
+
+// const imagePath = '../public/uploadone.png'
+
+const port = process.env.PORT || 6000;
+const app = express();
 
 // Connecting sever to the database
 connectToDatabase();
+
+// uploadImg(imagePath);
 
 // Defining Middlewares
 app.use(cors());
@@ -57,8 +68,8 @@ app.post('/auth/user/sign-up', async (req, res) => {
 app.post('/auth/user/sign-in', async (req, res) => {
 
     const { email, password } = req.body;
-    const token = jwt.sign({ email: email }, 'qwertyestorekey')
-    // console.log(token);
+    const token = jwt.sign({ email: email }, process.env.JWT_SECRET)
+    // console.log("Email:", email, "Password:", password);
 
     // Validating email format at server-side
     if (!validateEmail(email)) {
@@ -93,7 +104,7 @@ app.post('/auth/user/verify-user', async (req, res) => {
     const { userid } = req.body;
     // console.log(userid)
     try {
-        const decoded = await jwt.verify(userid, 'qwertyestorekey');
+        const decoded = await jwt.verify(userid, process.env.JWT_SECRET);
         const result = await checkEmailExistence(decoded.email);
         if (result === true) {
             console.log('Authorization successful')
@@ -114,7 +125,7 @@ app.get('/users/profile/:userid', async (req, res) => {
 
     const usertoken = req.params.userid;
     try {
-        const decoded = await jwt.verify(usertoken, 'qwertyestorekey');
+        const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET);
         const userdata = await userProfiledata(decoded.email)
         return res.status(200).json(userdata);
     } catch (error) {
@@ -129,7 +140,7 @@ app.get('/users/profile/:userid', async (req, res) => {
 app.post('/auth/user/google/sign-in', async (req, res) => {
 
     const { useremail } = req.body;
-    const token = jwt.sign({ email: useremail }, 'qwertyestorekey')
+    const token = jwt.sign({ email: useremail }, process.env.JWT_SECRET)
 
     try {
         const verifyresult = await googleAuthClient(useremail);
@@ -212,7 +223,7 @@ app.patch('/user/profile/update', async (req, res) => {
     try {
         const updateResult = await updateProfile(name, email, mobileno, address);
         if (updateResult) {
-            return res.status(200).json({ success:true, message: 'Profile details updated successfully', updateResult })
+            return res.status(200).json({ success: true, message: 'Profile details updated successfully', updateResult })
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
@@ -222,6 +233,48 @@ app.patch('/user/profile/update', async (req, res) => {
 
 
 
+app.get('/user/order', async (req, res) => {
+
+    const order = await generateOrder();
+    res.status(200).json({ success: true, message: 'order id generated successfully', order })
+})
+
+
+app.post('/upload/image', store.single('photo'), async (req, res) => {
+
+    const { title, description, price, category, subcategory } = req.body;
+    // console.log(title, description, price, category, subcategory);
+    const { path } = await req.file;
+
+    if (path == '' || path == null) {
+        return res.status(403).json({ success: false, message: 'Image Not Found!, Please upload image' })
+    }
+
+    try {
+        const uploadResult = await uploadImg(path);
+        console.log("Product Image Uploaded");
+        await addproduct(title, description, price, category, subcategory, uploadResult.secure_url)
+        console.log('New Product Added')
+        return res.status(200).json({ success: true, message: 'Image Uploaded on Cloudnary successfully', uploadResult })
+        
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+        console.log(error);
+    }
+})
+
+
+
 app.listen(port, () => {
     console.log(`Server running at port ${port}`)
 })
+
+
+// const rasorpay = require('razorpay');
+
+// const instance = new rasorpay({ key_id:process.env.KEY_ID, key_secret:process.env.KEY_SECRET })
+
+// var { validatePaymentVerification } = require('../node_modules/dist/utils/razorpay-utils');
+
+// const orderresult = validatePaymentVerification({"order_id": "order_Nrhjm62zyNcenN", "payment_id": "pay_NrhoHSVLuhAzXx" }, "90bac0dec911df3b617da4af180396760347b1d7e0ab04de2f5d35c818d601d2", 'm1HXTP8tTwsqdOSpZmdUpLy9');
+// console.log(orderresult);
