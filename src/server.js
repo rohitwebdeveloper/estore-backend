@@ -11,7 +11,8 @@ const { sendEmail } = require('./utils/sendMail');
 const { generateOrder } = require('./utils/order')
 const store = require('./middlewares/storeimage')
 const uploadImg = require('./utils/cloudinary')
-const {addproduct} = require('./utils/addproduct')
+const { addproduct } = require('./utils/addproduct')
+const { addseller, findSellerExistance, sellerIdExistence, findSellerProfile, updateSellerProfile } = require('./utils/sellerAuthentication')
 
 
 
@@ -233,13 +234,14 @@ app.patch('/user/profile/update', async (req, res) => {
 
 
 
-app.get('/user/order', async (req, res) => {
+// app.get('/user/order', async (req, res) => {
 
-    const order = await generateOrder();
-    res.status(200).json({ success: true, message: 'order id generated successfully', order })
-})
+//     const order = await generateOrder();
+//     res.status(200).json({ success: true, message: 'order id generated successfully', order })
+// })
 
 
+// Route for handling post request for adding a new product to the database and and saving its image on cloud
 app.post('/upload/image', store.single('photo'), async (req, res) => {
 
     const { title, description, price, category, subcategory } = req.body;
@@ -256,10 +258,68 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
         await addproduct(title, description, price, category, subcategory, uploadResult.secure_url)
         console.log('New Product Added')
         return res.status(200).json({ success: true, message: 'Image Uploaded on Cloudnary successfully', uploadResult })
-        
+
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
         console.log(error);
+    }
+})
+
+
+
+// Defining Route for seller registration
+app.post('/auth/seller/register', async (req, res) => {
+    const { name, email, sellerId, company, mobileno, locality, city, state, pincode } = req.body;
+
+    try {
+        const result = await findSellerExistance(email)
+        if (!result) {
+            return res.status(409).json({ success: false, message: 'This account already exists' })
+        }
+
+        const idResult = await sellerIdExistence(sellerId)
+        if (!idResult) {
+            return res.status(409).json({ success: false, message: 'This SellerId is not available' })
+        }
+
+        await addseller(name, email, sellerId, company, mobileno, locality, city, state, pincode)
+        return res.status(201).json({ success: true, message: "Registration successful" });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+    }
+
+})
+
+
+
+// Defining Route for seller profile request
+app.get('/seller/dashboard/profile/:userid', async (req, res) => {
+    const sellerToken = req.params.userid;
+
+    try {
+        const decoded = await jwt.verify(sellerToken, process.env.JWT_SECRET)
+        const sellerDetails = await findSellerProfile(decoded.email)
+        return res.status(200).json(sellerDetails)
+    } catch (error) {
+        res.status(500).json({success:false, message:error} || 'Internal server error')
+    }
+})
+
+
+// Defining Route for seller profile upadate
+app.post('/seller/dashboard/profile/update', async (req, res) => {
+    const {name, email, company, mobileno, locality, city, state, pincode} = req.body;
+
+    try {
+        const updateResult  = await updateSellerProfile(email, name, company, mobileno, locality, city, state, pincode)
+        if (updateResult) {
+            return res.status(200).json({success:true, message:'Seller Profile Updated Successfully', updateResult})
+        } else {
+            return res.status(403).json({success:false, message:'Sorry, Unable to Update Profile', updateResult})
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
     }
 })
 

@@ -16,7 +16,10 @@ const sellerSchema = new mongoose.Schema({
         type:String,
         required:true,
         unique:true,
-        unique:true
+    },
+    company:{
+        type:String,
+        required:true,
     },
     mobilenumber:{
         type:Number,
