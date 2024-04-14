@@ -35,4 +35,4 @@ const sellerSchema = new mongoose.Schema({
 })
 
 const seller = mongoose.model('Seller', sellerSchema)
-module.exports = seller;
+module.exports = {seller}

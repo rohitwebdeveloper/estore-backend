@@ -5,14 +5,14 @@ const jwt = require('jsonwebtoken');
 const connectToDatabase = require('./db/connect');
 require('dotenv').config({ path: '../.env' });
 
-const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, googleAuthClient, checkEmailExistence, resetPassword, updateProfile } = require('./utils/authentication');
+const { addcustomer, findEmailExistence, verifySigninDetails, userProfiledata, checkEmailExistence, resetPassword, updateProfile, generateToken } = require('./utils/userAuthentication');
 const { validateEmail, validatepassword } = require('./utils/validation');
 const { sendEmail } = require('./utils/sendMail');
 const { generateOrder } = require('./utils/order')
 const store = require('./middlewares/storeimage')
 const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
-const { addseller, findSellerExistance, sellerIdExistence, findSellerProfile, updateSellerProfile } = require('./utils/sellerAuthentication')
+const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 
 
 
@@ -69,8 +69,6 @@ app.post('/auth/user/sign-up', async (req, res) => {
 app.post('/auth/user/sign-in', async (req, res) => {
 
     const { email, password } = req.body;
-    const token = jwt.sign({ email: email }, process.env.JWT_SECRET)
-    // console.log("Email:", email, "Password:", password);
 
     // Validating email format at server-side
     if (!validateEmail(email)) {
@@ -81,13 +79,17 @@ app.post('/auth/user/sign-in', async (req, res) => {
 
         const verifyemail = await findEmailExistence(email)
         if (verifyemail.length === 0) {
-            return res.status(401).json({ success: false, message: 'Invalid email' });
+            return res.status(401).json({ success: false, message: 'Email does not exists' });
         }
 
+        const token = await generateToken(verifyemail)
+
         const verifypassword = await verifySigninDetails(email, password);
+
         if (verifypassword == true) {
             console.log('Sign-In successful');
             return res.status(200).json({ success: true, message: 'Sign-in successful', token })
+
         } else {
             return res.status(401).json({ success: false, message: "Invalid password" })
         }
@@ -106,7 +108,7 @@ app.post('/auth/user/verify-user', async (req, res) => {
     // console.log(userid)
     try {
         const decoded = await jwt.verify(userid, process.env.JWT_SECRET);
-        const result = await checkEmailExistence(decoded.email);
+        const result = await checkEmailExistence(decoded.useremail);
         if (result === true) {
             console.log('Authorization successful')
             return res.status(200).json({ success: true, message: 'Authorization successful' })
@@ -114,7 +116,7 @@ app.post('/auth/user/verify-user', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Authorization failed' })
         }
     } catch (error) {
-        console.log('authuser error', error);
+        console.log('authuser error');
         res.status(500).json({ success: false, message: error || 'Internal server error' })
     }
 })
@@ -127,7 +129,7 @@ app.get('/users/profile/:userid', async (req, res) => {
     const usertoken = req.params.userid;
     try {
         const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET);
-        const userdata = await userProfiledata(decoded.email)
+        const userdata = await userProfiledata(decoded.useremail)
         return res.status(200).json(userdata);
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
@@ -141,16 +143,19 @@ app.get('/users/profile/:userid', async (req, res) => {
 app.post('/auth/user/google/sign-in', async (req, res) => {
 
     const { useremail } = req.body;
-    const token = jwt.sign({ email: useremail }, process.env.JWT_SECRET)
+    // const token = jwt.sign({ email: useremail }, process.env.JWT_SECRET)
 
     try {
-        const verifyresult = await googleAuthClient(useremail);
-        if (verifyresult === true) {
-            console.log('Google sign-in successfull')
-            return res.status(200).json({ success: true, message: 'SignIn successful', token });
-        } else {
+        const verifyresult = await findEmailExistence(useremail);
+        if (!verifyresult.length) {
             return res.status(401).json({ success: false, message: 'Account does not exist' });
         }
+
+        const token = await generateToken(verifyresult);
+
+        return res.status(200).json({ success: true, message: 'SignIn successful', token });
+        console.log('Google sign-in successfull')
+
     } catch (error) {
         console.error('Token verification failed:', error);
         return res.status(500).json({ success: false, message: 'Invalid token' });
@@ -269,21 +274,26 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
 
 // Defining Route for seller registration
 app.post('/auth/seller/register', async (req, res) => {
-    const { name, email, sellerId, company, mobileno, locality, city, state, pincode } = req.body;
+    const { name, email, company, mobileno, locality, city, state, pincode } = req.body;
 
     try {
-        const result = await findSellerExistance(email)
-        if (!result) {
+        const seller = await findSellerExistance(email)
+        if (seller.length) {
             return res.status(409).json({ success: false, message: 'This account already exists' })
         }
+        
+        await addseller(name, email, company, mobileno, locality, city, state, pincode)
 
-        const idResult = await sellerIdExistence(sellerId)
-        if (!idResult) {
-            return res.status(409).json({ success: false, message: 'This SellerId is not available' })
-        }
+        await updateIsSeller(email) 
 
-        await addseller(name, email, sellerId, company, mobileno, locality, city, state, pincode)
         return res.status(201).json({ success: true, message: "Registration successful" });
+        // const token = await generateToken(userDetails)
+
+        // const idResult = await sellerIdExistence(sellerId)
+        // if (!idResult) {
+        //     return res.status(409).json({ success: false, message: 'This SellerId is not available' })
+        // }
+
 
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
@@ -299,24 +309,24 @@ app.get('/seller/dashboard/profile/:userid', async (req, res) => {
 
     try {
         const decoded = await jwt.verify(sellerToken, process.env.JWT_SECRET)
-        const sellerDetails = await findSellerProfile(decoded.email)
+        const sellerDetails = await findSellerProfile(decoded.useremail)
         return res.status(200).json(sellerDetails)
     } catch (error) {
-        res.status(500).json({success:false, message:error} || 'Internal server error')
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
     }
 })
 
 
 // Defining Route for seller profile upadate
 app.post('/seller/dashboard/profile/update', async (req, res) => {
-    const {name, email, company, mobileno, locality, city, state, pincode} = req.body;
+    const { name, email, company, mobileno, locality, city, state, pincode } = req.body;
 
     try {
-        const updateResult  = await updateSellerProfile(email, name, company, mobileno, locality, city, state, pincode)
+        const updateResult = await updateSellerProfile(email, name, company, mobileno, locality, city, state, pincode)
         if (updateResult) {
-            return res.status(200).json({success:true, message:'Seller Profile Updated Successfully', updateResult})
+            return res.status(200).json({ success: true, message: 'Seller Profile Updated Successfully', updateResult })
         } else {
-            return res.status(403).json({success:false, message:'Sorry, Unable to Update Profile', updateResult})
+            return res.status(403).json({ success: false, message: 'Sorry, Unable to Update Profile', updateResult })
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
