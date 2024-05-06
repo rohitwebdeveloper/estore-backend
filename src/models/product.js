@@ -14,8 +14,13 @@ const productSchema = new mongoose.Schema({
         type:Number,
         required:true
     },
+    brand:{
+        type:String,
+        default:'Other'
+    },
     category:{
         type:String,
+        required: true,
         default:'Other'
     },
     subCategory:{

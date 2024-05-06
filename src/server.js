@@ -13,7 +13,7 @@ const store = require('./middlewares/storeimage')
 const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
-
+const optimizeImg = require('./utils/optimizeImg')
 
 
 // const imagePath = '../public/uploadone.png'
@@ -250,7 +250,6 @@ app.patch('/user/profile/update', async (req, res) => {
 app.post('/upload/image', store.single('photo'), async (req, res) => {
 
     const { title, description, price, category, subcategory } = req.body;
-    // console.log(title, description, price, category, subcategory);
     const { path } = await req.file;
 
     if (path == '' || path == null) {
@@ -258,8 +257,9 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
     }
 
     try {
-        const uploadResult = await uploadImg(path);
-        console.log("Product Image Uploaded");
+        const filepath = await optimizeImg(path);
+        const uploadResult = await uploadImg(filepath);
+
         await addproduct(title, description, price, category, subcategory, uploadResult.secure_url)
         console.log('New Product Added')
         return res.status(200).json({ success: true, message: 'Image Uploaded on Cloudnary successfully', uploadResult })
@@ -281,10 +281,10 @@ app.post('/auth/seller/register', async (req, res) => {
         if (seller.length) {
             return res.status(409).json({ success: false, message: 'This account already exists' })
         }
-        
+
         await addseller(name, email, company, mobileno, locality, city, state, pincode)
 
-        await updateIsSeller(email) 
+        await updateIsSeller(email)
 
         return res.status(201).json({ success: true, message: "Registration successful" });
         // const token = await generateToken(userDetails)
