@@ -25,11 +25,11 @@ const { Product } = require('./product');
 
 const kartSchema = new mongoose.Schema({
     user:{
-        type:Schema.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:'User'
     },
     product:{
-        type:Schema.Types.ObjectId,
+        type:mongoose.Schema.Types.ObjectId,
         ref:'Product'
     },
     quantity:{

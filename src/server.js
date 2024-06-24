@@ -14,6 +14,7 @@ const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
+const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment } = require('./utils/userPreferences')
 
 
 // const imagePath = '../public/uploadone.png'
@@ -208,7 +209,6 @@ app.post('/auth/user/forget-password', async (req, res) => {
 app.patch('/auth/user/reset-password', async (req, res) => {
 
     const { newpassword, emailverified } = req.body;
-    // console.log(newpassword, emailverified);
 
     try {
         const resetResult = await resetPassword(newpassword, emailverified)
@@ -239,17 +239,50 @@ app.patch('/user/profile/update', async (req, res) => {
 
 
 
-// app.get('/user/order', async (req, res) => {
+// Route to generate orderid request
+app.post('/user/order', async (req, res) => {
+    const total = await req.body.total;
+    console.log('Total:', total)
+    try {
+        const order = await generateOrder(total);
+        res.status(200).json({ success: true, message: 'order id generated successfully', order })
 
-//     const order = await generateOrder();
-//     res.status(200).json({ success: true, message: 'order id generated successfully', order })
-// })
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+        console.log(error);
+    }
+})
 
 
-// Route for handling post request for adding a new product to the database and and saving its image on cloud
+
+// Route to handle place order request
+app.post('/user/order-place', async (req, res) => {
+    const { order, userDetail, userId, razorpay_payment_id } = req.body;
+
+    try {
+        const decoded = await jwt.verify(userId, process.env.JWT_SECRET)
+        if (razorpay_payment_id) {
+            await placeOrderOnlinePayment(order, userDetail, decoded, razorpay_payment_id)
+            return res.status(200).json({ success: true, message: 'Your order has been Placed' })
+        } else {
+            const result = await placeOrderCashpayment(order, userDetail, decoded)
+            if (result) {
+                return res.status(200).json({ success: true, message: 'Your order has been Placed' })
+            } else {
+                return res.status(400).json({ success: false, message: 'Failed to place order' })
+            }
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+    }
+})
+
+
+
+//  Route for handling post request for adding a new product to the database and and saving its image on cloud
 app.post('/upload/image', store.single('photo'), async (req, res) => {
 
-    const { title, description, price, category, subcategory } = req.body;
+    const { title, description, price, brand, category, subcategory, userid } = req.body;
     const { path } = await req.file;
 
     if (path == '' || path == null) {
@@ -259,8 +292,8 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
     try {
         const filepath = await optimizeImg(path);
         const uploadResult = await uploadImg(filepath);
-
-        await addproduct(title, description, price, category, subcategory, uploadResult.secure_url)
+        const decoded = await jwt.verify(userid, process.env.JWT_SECRET)
+        await addproduct(title, description, price, brand, category, subcategory, uploadResult.secure_url, decoded.sellerId)
         console.log('New Product Added')
         return res.status(200).json({ success: true, message: 'Image Uploaded on Cloudnary successfully', uploadResult })
 
@@ -330,6 +363,63 @@ app.post('/seller/dashboard/profile/update', async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
+    }
+})
+
+app.get('/user/wishlist/:userid', async (req, res) => {
+    const usertoken = req.params.userid
+    try {
+        const userWishlist = await getUserWishlist()
+        return res.status(200).json(userWishlist)
+    } catch (error) {
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
+    }
+})
+
+app.post('/user/kart/addproduct/:userid', async (req, res) => {
+    const usertoken = req.params.userid;
+    const { productid } = req.body
+
+    try {
+        const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET)
+        const { userId } = decoded
+        const result = addToKart(userId, productid);
+        if (result) {
+            return res.status(200).json({ success: true, message: 'Added to Kart' })
+        } else {
+            return res.status(400).json({ success: false, message: "Failed to add to Kart" })
+        }
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
+    }
+})
+
+app.get('/user/kart/:userid', async (req, res) => {
+    const usertoken = req.params.userid;
+
+    try {
+        const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET)
+        // console.log(decoded.userId)
+        const kartItems = await getKartProduct(decoded.userId)
+        return res.status(200).json(kartItems)
+    } catch (error) {
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
+    }
+})
+
+
+app.delete('/user/kart/remove-product/:productid', async (req, res) => {
+    const productid = req.params.productid;
+
+    try {
+        const result = await removeKartProduct(productid)
+        if (result) {
+            console.log('Kart Product removed succesfully')
+            return res.status(200).json('Kart Product Removed Successfully')
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
     }
 })
 
