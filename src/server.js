@@ -14,7 +14,7 @@ const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
-const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment } = require('./utils/userPreferences')
+const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder } = require('./utils/userPreferences')
 
 
 // const imagePath = '../public/uploadone.png'
@@ -245,7 +245,7 @@ app.post('/user/order', async (req, res) => {
     console.log('Total:', total)
     try {
         const order = await generateOrder(total);
-        res.status(200).json({ success: true, message: 'order id generated successfully', order })
+        return res.status(200).json({ success: true, message: 'order id generated successfully', order })
 
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
@@ -275,6 +275,22 @@ app.post('/user/order-place', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
     }
+})
+
+
+
+// Endpoint to get orders for a specific user based on user ID
+app.get('/user/orders/:userid', async (req, res) => {
+    const userToken = req.params.userid;
+    try {
+        const decoded = await jwt.verify(userToken, process.env.JWT_SECRET)
+        const userOrders = await getOrder(decoded.userId)
+        return res.status(200).json(userOrders)
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server Error' })
+    }
+
 })
 
 
@@ -348,6 +364,8 @@ app.get('/seller/dashboard/profile/:userid', async (req, res) => {
         res.status(500).json({ success: false, message: error } || 'Internal server error')
     }
 })
+
+
 
 
 // Defining Route for seller profile upadate

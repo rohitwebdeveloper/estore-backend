@@ -11,13 +11,13 @@ const orderSchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Product'
         },
-            quantity: {
+        quantity: {
             type: Number,
             required: true
         },
-        subtotal:{
-            type:Number,
-            required:true
+        subtotal: {
+            type: Number,
+            required: true
         }
     }],
     orderid: {
@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema({
     },
     paymentid: {
         type: String,
-        default:'None'
+        default: 'None'
     },
     orderdate: {
         type: Date,
@@ -45,8 +45,8 @@ const orderSchema = new mongoose.Schema({
         }
     },
     customerDetails: {
-        name:String,
-        mobilenumber:String,
+        name: String,
+        mobilenumber: String,
         locality: String,
         city: String,
         pincode: {
@@ -63,7 +63,7 @@ const orderSchema = new mongoose.Schema({
         enum: ['Pending', 'Shipped', 'Delivered'],
         default: 'Pending'
     }
-    
+
 })
 
 const order = mongoose.model('Order', orderSchema);

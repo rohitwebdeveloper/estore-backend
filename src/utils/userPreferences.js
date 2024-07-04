@@ -113,6 +113,8 @@ const placeOrderCashpayment = async (orderdetail, userDetail, decoded) => {
     throw new Error('Error in placing order')
   }
 }
+
+
 const placeOrderOnlinePayment = async (orderdetail, userDetail, decoded, paymentId) => {
 
   try {
@@ -128,7 +130,7 @@ const placeOrderOnlinePayment = async (orderdetail, userDetail, decoded, payment
       user: decoded.userId,
       orderitem: orderitems,
       orderid: orderdetail[4],
-      paymentid:paymentId,
+      paymentid: paymentId,
       totalamount: orderdetail[3],
       payment: {
         mode: 'Online Payment',
@@ -153,4 +155,52 @@ const placeOrderOnlinePayment = async (orderdetail, userDetail, decoded, payment
 }
 
 
-module.exports = { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment };
+const getOrder = async (userId) => {
+  try {
+    // const userOrders = await order.find({user:userId})
+    const userOrders = await order.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId)
+        }
+      },
+      { $unwind: "$orderitem" },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'orderitem.product',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
+      },
+      {
+        $addFields: {
+          "orderitem.producturl": { $arrayElemAt: ["$productDetails.url", 0] },
+          "orderitem.producttile": { $arrayElemAt: ["$productDetails.title", 0] }
+        }
+      },
+      { $unset: "productDetails" },
+      {
+        $group: {
+          _id: "$_id",
+          orderitems: { $push: "$orderitem" },
+          // user: { $first: "$user" },
+          orderid: { $first: "$orderid" },
+          // paymentid: { $first: "$paymentid" },
+          totalamount: { $first: "$totalamount" },
+          // payment: { $first: "$payment" },
+          // customerDetails: { $first: "$customerDetails" },
+          status: { $first: "$status" },
+          orderdate: { $first: "$orderdate" }
+        }
+      }
+    ])
+    return userOrders
+  } catch (error) {
+    console.log('Error in finding user orders', error)
+    throw new Error('Error in finding user orders')
+  }
+}
+
+
+module.exports = { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder };
