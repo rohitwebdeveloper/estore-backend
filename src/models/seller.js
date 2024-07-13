@@ -12,11 +12,6 @@ const sellerSchema = new mongoose.Schema({
         unique:true,
         default:'Email'
     },
-    sellerId:{
-        type:String,
-        required:true,
-        unique:true,
-    },
     company:{
         type:String,
         required:true,

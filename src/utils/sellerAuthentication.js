@@ -1,7 +1,7 @@
 const { seller } = require('../models/seller')
 const { user } = require('../models/user')
 
-const addseller = async (name, email, sellerId, company, mobileno, locality, city, state, pincode) => {
+const addseller = async (name, email, company, mobileno, locality, city, state, pincode) => {
   try {
     const newSeller = new seller({
       name: name,

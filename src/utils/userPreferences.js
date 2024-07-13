@@ -2,6 +2,7 @@ const product = require('../models/product')
 const { kart } = require('../models/kart')
 const mongoose = require('mongoose')
 const { order } = require('../models/order')
+// const {product} = require('../models/product')
 
 const getUserWishlist = async () => {
   try {
@@ -203,4 +204,96 @@ const getOrder = async (userId) => {
 }
 
 
-module.exports = { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder };
+const getsellerProduct = async (sellerid) => {
+  try {
+    const sellerproduct = await product.find({seller:sellerid})
+    return sellerproduct
+  } catch (error) {
+    console.log('Error in finding seller product', error)
+    throw new Error('Error in finding seller product')
+  }
+}
+
+
+const unpublishProduct = async (productId) => {
+  try {
+     await product.deleteOne({_id:productId})
+    return true
+  } catch (error) {
+    throw new Error("Error in unpublishing seller product")
+  }
+}
+
+
+const getSellerOrder = async (sellerId) => {
+  try {
+ const sellerorder = await order.aggregate([
+      {
+        $unwind:"$orderitem"
+      },
+      {
+        $lookup:{
+          from:'products',
+          localField:'orderitem.product',
+          foreignField:'_id',
+          as:'productDetails'
+        }
+      },
+      {
+        $match:{
+          "productDetails.seller":new mongoose.Types.ObjectId(sellerId)
+        }
+      },
+      {
+        $addFields:{
+          'orderitem.producturl':{$arrayElemAt: ['$productDetails.url', 0]},
+          'orderitem.producttitle':{$arrayElemAt: ['$productDetails.title', 0]},
+          'orderitem.productprice':{$arrayElemAt: ['$productDetails.price', 0]}
+        }
+      },
+      { $unset:'productDetails' },
+      {
+        $group:{
+          _id:'$_id',
+          orderitems:{$push:'$orderitem'},
+          orderid:{$first:'$orderid'},
+          orderdate:{$first:'$orderdate'},
+          paymentid:{$first:'$paymentid'},
+          payment:{$first:'$payment'},
+          status:{$first:'$status'},
+          totalamount:{$first:'$totalamount'},
+          customerDetails:{$first:'$customerDetails'}
+        }
+      }
+
+     ])
+     return sellerorder;
+  } catch (error) {
+    throw new Error("Error in finding seller orders")
+  }
+}
+
+
+const updateSellerOrderStatus = async (orderStatusValue, idOrder) => {
+  try {
+     await order.updateOne({_id:idOrder}, {status:orderStatusValue})
+     return
+  } catch (error) {
+    throw new Error('Error in updating seller order status')
+  }
+}
+
+
+module.exports = {
+  getUserWishlist,
+  addToKart,
+  getKartProduct,
+  removeKartProduct,
+  placeOrderCashpayment,
+  placeOrderOnlinePayment,
+  getOrder,
+  getsellerProduct,
+  unpublishProduct,
+  getSellerOrder,
+  updateSellerOrderStatus,
+};

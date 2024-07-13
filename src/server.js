@@ -14,7 +14,7 @@ const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
-const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder } = require('./utils/userPreferences')
+const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus } = require('./utils/userPreferences')
 
 
 // const imagePath = '../public/uploadone.png'
@@ -128,6 +128,7 @@ app.post('/auth/user/verify-user', async (req, res) => {
 app.get('/users/profile/:userid', async (req, res) => {
 
     const usertoken = req.params.userid;
+
     try {
         const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET);
         const userdata = await userProfiledata(decoded.useremail)
@@ -323,7 +324,7 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
 
 // Defining Route for seller registration
 app.post('/auth/seller/register', async (req, res) => {
-    const { name, email, company, mobileno, locality, city, state, pincode } = req.body;
+    const { name, email, company, mobileno, locality, city, state, pincode } = req.body.sellerForm;
 
     try {
         const seller = await findSellerExistance(email)
@@ -334,6 +335,7 @@ app.post('/auth/seller/register', async (req, res) => {
         await addseller(name, email, company, mobileno, locality, city, state, pincode)
 
         await updateIsSeller(email)
+        
 
         return res.status(201).json({ success: true, message: "Registration successful" });
         // const token = await generateToken(userDetails)
@@ -365,7 +367,60 @@ app.get('/seller/dashboard/profile/:userid', async (req, res) => {
     }
 })
 
+//  Endpoint to get all products published by seller
+app.get('/seller/dashboard/product/:userid', async (req, res) => {
+    const sellerToken = req.params.userid;
+    try {
+        const decoded = await jwt.verify(sellerToken, process.env.JWT_SECRET)
+        const sellerProduct = await getsellerProduct(decoded.sellerId)
+        return res.status(200).json(sellerProduct)
 
+    } catch (error) {
+        res.status(500).json({ success: false, message: error || 'Internal server error' })
+    }
+
+})
+
+
+
+// Endpoint to Unpublish or remove product published by seller
+app.get('/seller/dashboard/product/unpublish/:productid', async (req, res) => {
+    const productId = req.params.productid
+    try {
+        const sellerProduct = await unpublishProduct(productId)
+        if(sellerProduct) {
+            return res.status(200).json(sellerProduct)
+        }
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
+
+
+// Defining endpoint for seller orders
+app.get('/seller/dashboard/order/:sellerid', async (req, res) => {
+    const sellerId = req.params.sellerid;
+
+    try {
+        const decoded = await jwt.verify(sellerId, process.env.JWT_SECRET)
+        const sellerOrder = await getSellerOrder(decoded.sellerId)
+        return res.status(200).json(sellerOrder)
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
+
+
+// Defining endpoint for updating order status
+app.patch('/seller/dashboard/order/status-update', async (req, res) => {
+    const {orderStatusValue, idOrder} = req.body;
+    try {
+        await updateSellerOrderStatus(orderStatusValue, idOrder)
+        return res.status(200).json({success:true, message:"orderstatus updated successfully"})
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
 
 
 // Defining Route for seller profile upadate

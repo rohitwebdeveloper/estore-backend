@@ -112,7 +112,7 @@ const generateToken = async (userData) => {
       return token;
 
     } else {
-      const token = await jwt.sign({ useremail: userData.email, userId: userData._id }, process.env.JWT_SECRET)
+      const token = await jwt.sign({ useremail: userData[0].email, userId: userData[0]._id }, process.env.JWT_SECRET)
       return token;
     }
 
