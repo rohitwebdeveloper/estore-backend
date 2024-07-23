@@ -15,7 +15,7 @@ const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
 const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus } = require('./utils/userPreferences')
-
+const {getElectronicsProduct} = require('./utils/categoryProducts');
 
 // const imagePath = '../public/uploadone.png'
 
@@ -297,7 +297,7 @@ app.get('/user/orders/:userid', async (req, res) => {
 
 
 //  Route for handling post request for adding a new product to the database and and saving its image on cloud
-app.post('/upload/image', store.single('photo'), async (req, res) => {
+app.post('/seller/product/publish', store.single('photo'), async (req, res) => {
 
     const { title, description, price, brand, category, subcategory, userid } = req.body;
     const { path } = await req.file;
@@ -311,8 +311,8 @@ app.post('/upload/image', store.single('photo'), async (req, res) => {
         const uploadResult = await uploadImg(filepath);
         const decoded = await jwt.verify(userid, process.env.JWT_SECRET)
         await addproduct(title, description, price, brand, category, subcategory, uploadResult.secure_url, decoded.sellerId)
-        console.log('New Product Added')
-        return res.status(200).json({ success: true, message: 'Image Uploaded on Cloudnary successfully', uploadResult })
+        console.log('New Product Published')
+        return res.status(200).json({ success: true, message: 'Your product has been published', uploadResult })
 
     } catch (error) {
         res.status(500).json({ success: false, message: error || 'Internal server error' })
@@ -492,7 +492,20 @@ app.delete('/user/kart/remove-product/:productid', async (req, res) => {
             return res.status(200).json('Kart Product Removed Successfully')
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: error } || 'Internal server error')
+        res.status(500).json({ success: false, message: error || ' Internal server error' } )
+    }
+})
+
+
+// Endpoint to get products of electronics category
+app.get('/products/category/:category', async (req, res) => {
+    const {category} = req.params;
+    
+    try {
+        const electronicsProduct = await getElectronicsProduct(category)
+        return res.status(200).json({success:true, message:'Products fetched successfully', electronicsProduct})
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
     }
 })
 

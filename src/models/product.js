@@ -16,16 +16,16 @@ const productSchema = new mongoose.Schema({
     },
     brand:{
         type:String,
-        default:'Other'
+        default:'None'
     },
     category:{
         type:String,
         required: true,
-        default:'Other'
+        default:'None'
     },
     subCategory:{
         type:String,
-        default:'Other'
+        default:'None'
 
     },
     url:{
@@ -35,7 +35,11 @@ const productSchema = new mongoose.Schema({
     seller:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Seller'
-    }
+    },
+    ratingValue: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Rating',
+      }],
 
 })
 

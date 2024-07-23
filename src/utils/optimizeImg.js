@@ -9,7 +9,7 @@ const optimizeImg = async (imgPath) => {
         const imgName = await path.basename(imgPath);
         const outputPath = `../public/estore-${imgName}`
         const sharpResult = await sharp(imgPath)
-            .resize(200, 200)
+            .resize(200, 300)
             .webp({ quality: 80 })
             .toFile(outputPath)
          console.log('Image Optimization Result:', sharpResult)
