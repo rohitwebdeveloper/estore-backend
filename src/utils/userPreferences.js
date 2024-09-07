@@ -2,12 +2,37 @@ const product = require('../models/product')
 const { kart } = require('../models/kart')
 const mongoose = require('mongoose')
 const { order } = require('../models/order')
+const {wishlist} = require('../models/wishlist')
+const rating = require('../models/Rating')
+const { updateOne } = require('../models/product')
+
 // const {product} = require('../models/product')
 
-const getUserWishlist = async () => {
+const getUserWishlist = async (userId) => {
   try {
-    const wishlist = await product.find()
-    return wishlist
+    const wishlistItem = await wishlist.aggregate([
+      {
+        $match:{
+          user:new mongoose.Types.ObjectId(userId)
+        }
+      },
+      {
+        $lookup:{
+          from:'products',
+          localField:'product',
+          foreignField:'_id',
+          as:'productDetails',
+        }
+      },
+      {
+        $addFields:{
+          productdetail:{
+            $arrayElemAt:['$productDetails', 0]
+          }
+        }
+      },
+    ])
+    return wishlistItem
 
   } catch (error) {
     console.log(error)
@@ -174,12 +199,27 @@ const getOrder = async (userId) => {
           as: 'productDetails'
         }
       },
+  
       {
         $addFields: {
           "orderitem.producturl": { $arrayElemAt: ["$productDetails.url", 0] },
           "orderitem.producttile": { $arrayElemAt: ["$productDetails.title", 0] }
         }
       },
+      {
+        $lookup: {
+          from:'ratings',
+          localField:'orderitem.rating',
+          foreignField:'_id',
+          as: 'productRating',
+        }
+      },
+      {
+        $addFields: {
+          "orderitem.rating": { $arrayElemAt: ["$productRating.rateValue", 0] }
+        }
+      },
+      
       { $unset: "productDetails" },
       {
         $group: {
@@ -194,7 +234,7 @@ const getOrder = async (userId) => {
           status: { $first: "$status" },
           orderdate: { $first: "$orderdate" }
         }
-      }
+      },
     ])
     return userOrders
   } catch (error) {
@@ -284,6 +324,51 @@ const updateSellerOrderStatus = async (orderStatusValue, idOrder) => {
 }
 
 
+const addToWishlist = async (userId, productId) => {
+  try {
+     const wishlistItem = new wishlist({
+      user:userId,
+      product:productId
+     })
+     await wishlistItem.save()
+     return
+  } catch (error) {
+    console.log('Error in adding to wishlist')
+    throw new Error('Error in adding to wishlist', error)
+  }
+}
+
+
+const saveRating = async (userid, productid, ratedVal, orderId, orderitemId) => {
+  try {
+    const productRating = new rating({
+      userId:userid,
+      productId:productid,
+      rateValue:ratedVal
+    })
+  const savedRating =  await productRating.save()
+  const updatedOrder = await order.updateOne({orderid:orderId, 'orderitem._id':mongoose.Types.ObjectId(orderitemId)}, {$set: {'orderitem.$.rating':savedRating._id}})
+    return true;
+  } catch (error) {
+    console.log('Error in saving rating', error)
+    throw new Error('Error in saving rating', error)
+  }
+}
+
+
+
+const removeWishlistProduct = async (productid) => {
+  try {
+     await wishlist.deleteOne({_id:productid})
+     return true;
+  } catch (error) {
+    console.log('Error in removing wishlist product', error)
+    throw new Error('Error in removing wishlist product', error)
+  }
+}
+
+
+
 module.exports = {
   getUserWishlist,
   addToKart,
@@ -296,4 +381,7 @@ module.exports = {
   unpublishProduct,
   getSellerOrder,
   updateSellerOrderStatus,
+  addToWishlist,
+  saveRating,
+  removeWishlistProduct,
 };

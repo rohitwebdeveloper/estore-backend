@@ -14,7 +14,7 @@ const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
-const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus } = require('./utils/userPreferences')
+const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus, addToWishlist, saveRating, removeWishlistProduct } = require('./utils/userPreferences')
 const {getElectronicsProduct} = require('./utils/categoryProducts');
 
 // const imagePath = '../public/uploadone.png'
@@ -285,6 +285,7 @@ app.get('/user/orders/:userid', async (req, res) => {
     const userToken = req.params.userid;
     try {
         const decoded = await jwt.verify(userToken, process.env.JWT_SECRET)
+        console.log(decoded.userId)
         const userOrders = await getOrder(decoded.userId)
         return res.status(200).json(userOrders)
 
@@ -442,8 +443,21 @@ app.post('/seller/dashboard/profile/update', async (req, res) => {
 app.get('/user/wishlist/:userid', async (req, res) => {
     const usertoken = req.params.userid
     try {
-        const userWishlist = await getUserWishlist()
+        const decoded = await jwt.verify(usertoken, process.env.JWT_SECRET)
+        const userWishlist = await getUserWishlist(decoded.userId)
         return res.status(200).json(userWishlist)
+    } catch (error) {
+        res.status(500).json({ success: false, message: error } || 'Internal server error')
+    }
+})
+
+app.post('/wishlist/add/:productid', async (req, res) => {
+    const productId = req.params.productid;
+    const userId =req.body.userid;
+    try {
+        const decoded = await jwt.verify(userId, process.env.JWT_SECRET)
+        await addToWishlist(decoded.userId, productId)
+        res.status(200).json({success:true, message:'Added To Wishlist'})
     } catch (error) {
         res.status(500).json({ success: false, message: error } || 'Internal server error')
     }
@@ -510,8 +524,38 @@ app.get('/products/category/:category', async (req, res) => {
 })
 
 
+app.post('/products/rating', async (req, res) => {
+    const {userid, productid, ratedVal, orderId, orderitemId} = req.body;
+    // console.log(userid, productid, ratedVal)
+    try {
+        const decoded = await jwt.verify(userid, process.env.JWT_SECRET)
+        const result = await saveRating(decoded.userId, productid, ratedVal, orderId, orderitemId)
+        if(result){
+            return res.status(200).json({success:true, message:'Rating Saved Successfully'})
+        }
+    } catch (error) {
+       res.status(500).json({success:false, message:error || 'Internal server error'}) 
+    }
+})
 
-app.listen(port, () => {
+
+app.delete('/wishlist/:productid', async (req, res) => {
+    const {productid} = req.params;
+
+    try {
+        const result = await removeWishlistProduct(productid)
+        if(result) {
+            return res.status(200).json({success:true, message:'Product Removed Successfully'})
+        }
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
+
+
+
+
+app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at port ${port}`)
 })
 

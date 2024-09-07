@@ -18,6 +18,10 @@ const orderSchema = new mongoose.Schema({
         subtotal: {
             type: Number,
             required: true
+        },
+        rating: {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'Rating'
         }
     }],
     orderid: {
@@ -62,7 +66,8 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Shipped', 'Delivered', 'Processing', 'Packed', 'Refunded', 'Out for Delivery', 'Cancelled'  ],
         default: 'Pending'
-    }
+    },
+ 
 
 })
 

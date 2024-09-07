@@ -108,7 +108,7 @@ const generateToken = async (userData) => {
 
     if (userData[0].isSeller === true) {
       const sellerData = await seller.findOne({ email: userData[0].email })
-      const token = await jwt.sign({ useremail: userData[0].email, userId: userData[0]._id, sellerId: sellerData._id }, process.env.JWT_SECRET)
+      const token = jwt.sign({ useremail: userData[0].email, userId: userData[0]._id, sellerId: sellerData._id }, process.env.JWT_SECRET)
       return token;
 
     } else {
