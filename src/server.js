@@ -14,7 +14,7 @@ const uploadImg = require('./utils/cloudinary')
 const { addproduct } = require('./utils/addproduct')
 const { addseller, findSellerExistance, findSellerProfile, updateSellerProfile, updateIsSeller } = require('./utils/sellerAuthentication')
 const optimizeImg = require('./utils/optimizeImg')
-const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus, addToWishlist, saveRating, removeWishlistProduct } = require('./utils/userPreferences')
+const { getUserWishlist, addToKart, getKartProduct, removeKartProduct, placeOrderCashpayment, placeOrderOnlinePayment, getOrder, getsellerProduct, unpublishProduct, getSellerOrder, updateSellerOrderStatus, addToWishlist, saveRating, removeWishlistProduct, getproduct, getSearchData } = require('./utils/userPreferences')
 const {getElectronicsProduct} = require('./utils/categoryProducts');
 
 // const imagePath = '../public/uploadone.png'
@@ -552,6 +552,31 @@ app.delete('/wishlist/:productid', async (req, res) => {
     }
 })
 
+
+app.get('/products/:productid', async (req, res) => {
+    const {productid} = req.params;
+    
+    try {
+        const product = await getproduct(productid)
+        if(product) {
+            res.status(200).json(product)
+        }
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
+
+
+
+app.get('/search', async (req, res) => {
+    const searchVal =  req.query.q.toLowerCase().replace(/\s+/g, '');
+    try {
+        const searchresult = await getSearchData(searchVal)
+        res.status(200).json(searchresult)
+    } catch (error) {
+        res.status(500).json({success:false, message:error || 'Internal server error'})
+    }
+})
 
 
 

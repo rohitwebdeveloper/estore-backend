@@ -368,6 +368,65 @@ const removeWishlistProduct = async (productid) => {
 }
 
 
+const getproduct = async (productid) => {
+  try {
+  //  const productdetails = await product.find({_id:productid})
+  //   return productdetails;
+
+  const productdetails = await product.aggregate([
+    {
+      $match: {
+        _id: mongoose.Types.ObjectId(productid)
+      }
+    },
+    {
+      $lookup: {
+        from: 'ratings', 
+        localField: '_id', 
+        foreignField: 'productId', 
+        as: 'ratings' 
+      }
+    },
+    {
+      $addFields: {
+        averagerating: { $avg: '$ratings.rateValue' } 
+      }
+    }
+  ])
+
+  return productdetails
+
+  } catch (error) {
+    throw new Error('Error in getting product details')
+  }
+}
+
+
+
+const getSearchData = async (searchVal) => {
+  try {
+    // const result = await product.find({$or:[{title:searchVal}, {subCategory:searchVal}, {category:searchVal}, {brand:searchVal}] })
+    // return result
+     // Create a regex pattern for flexible matching
+     const regexPattern = new RegExp(searchVal.split('').join('.*'), 'i');
+
+     // Perform the search using the regex pattern
+     const result = await product.find({
+       $or: [
+         { title: { $regex: regexPattern } },
+         { subCategory: { $regex: regexPattern } },
+         { category: { $regex: regexPattern } },
+         { brand: { $regex: regexPattern } }
+       ]
+     });
+ 
+     return result;
+  } catch (error) {
+   throw new Error('Error in searching product') 
+  }
+}
+
+
 
 module.exports = {
   getUserWishlist,
@@ -384,4 +443,6 @@ module.exports = {
   addToWishlist,
   saveRating,
   removeWishlistProduct,
+  getproduct,
+  getSearchData
 };
