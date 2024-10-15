@@ -7,13 +7,15 @@ const optimizeImg = async (imgPath) => {
 
     try {
         const imgName = await path.basename(imgPath);
-        const outputPath = `../public/estore-${imgName}`
+        console.log("Image Path:", imgPath)
+        // const outputPath = `../public/estore-${imgName}`  
+        const outputPath = path.join(__dirname, '../../public', `estore-${imgName}`);
         const sharpResult = await sharp(imgPath)
             .resize(200, 300)
             .webp({ quality: 80 })
             .toFile(outputPath)
          console.log('Image Optimization Result:', sharpResult)
-        fs.unlinkSync(imgPath)
+      fs.unlinkSync(imgPath);
         return outputPath
     } catch (error) {
         console.log("Error in optimizing image:", error)
