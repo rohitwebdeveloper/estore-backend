@@ -1,22 +1,14 @@
 const sharp = require('sharp');
-const path = require('path')
-const fs = require('fs')
 
-
-const optimizeImg = async (imgPath) => {
+const optimizeImg = async (imageBuffer) => {
 
     try {
-        const imgName = await path.basename(imgPath);
-        console.log("Image Path:", imgPath)
-        // const outputPath = `../public/estore-${imgName}`  
-        const outputPath = path.join(__dirname, '../../public', `estore-${imgName}`);
-        const sharpResult = await sharp(imgPath)
+        const sharpResult = await sharp(imageBuffer)
             .resize(200, 300)
             .webp({ quality: 80 })
-            .toFile(outputPath)
-         console.log('Image Optimization Result:', sharpResult)
-      fs.unlinkSync(imgPath);
-        return outputPath
+            .toBuffer()
+         console.log('Image Optimization successful')
+        return sharpResult;
     } catch (error) {
         console.log("Error in optimizing image:", error)
         throw new Error('Error in optimizing Image')

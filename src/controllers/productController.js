@@ -50,15 +50,14 @@ const saveProductRating = async (req, res) => {
 const productPublish = async (req, res) => {
 
     const { title, description, price, brand, category, subcategory, userid } = req.body;
-    console.log('Received details:', title, subcategory)
-    const { path } = await req.file;
+    // console.log('Received details:', title, subcategory)
 
-    if (path == '' || path == null) {
+    if (req.file.buffer == '' || req.file.buffer == null) {
         return res.status(403).json({ success: false, message: 'Image Not Found!, Please upload image' })
     }
 
-    const filepath = await optimizeImg(path);
-    const uploadResult = await uploadImg(filepath);
+    const imgBuffer = await optimizeImg(req.file.buffer);
+    const uploadResult = await uploadImg(imgBuffer);
     const decoded = await jwt.verify(userid, process.env.JWT_SECRET)
     await addproduct(title, description, price, brand, category, subcategory, uploadResult.secure_url, decoded.sellerId)
     console.log('New Product Published')
